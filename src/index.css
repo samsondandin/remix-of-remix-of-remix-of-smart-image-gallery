@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+
+    --radius: 0.75rem;
+
+    /* Category colors */
+    --category-portrait: 340 82% 52%;
+    --category-animal: 142 71% 45%;
+    --category-vehicle: 199 89% 48%;
+    --category-landscape: 45 93% 47%;
+    --category-document: 262 83% 58%;
+    --category-food: 25 95% 53%;
+    --category-architecture: 174 84% 38%;
+    --category-other: 215 20% 55%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(199 89% 48%), hsl(262 83% 58%));
+    --gradient-card: linear-gradient(145deg, hsl(222 47% 11%), hsl(222 47% 7%));
+    --gradient-glow: radial-gradient(ellipse at center, hsl(199 89% 48% / 0.15), transparent 70%);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(222 47% 4% / 0.4);
+    --shadow-md: 0 8px 24px hsl(222 47% 4% / 0.5);
+    --shadow-lg: 0 16px 48px hsl(222 47% 4% / 0.6);
+    --shadow-glow: 0 0 40px hsl(199 89% 48% / 0.25);
+  }
+
+  .dark {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glass-strong {
+    @apply bg-card/90 backdrop-blur-2xl border border-border/60;
+  }
+
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-border {
+    position: relative;
+    background: hsl(var(--card));
+    border-radius: var(--radius);
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-primary);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  .category-portrait { --category-color: var(--category-portrait); }
+  .category-animal { --category-color: var(--category-animal); }
+  .category-vehicle { --category-color: var(--category-vehicle); }
+  .category-landscape { --category-color: var(--category-landscape); }
+  .category-document { --category-color: var(--category-document); }
+  .category-food { --category-color: var(--category-food); }
+  .category-architecture { --category-color: var(--category-architecture); }
+  .category-other { --category-color: var(--category-other); }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
