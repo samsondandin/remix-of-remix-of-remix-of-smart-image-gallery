@@ -22,7 +22,7 @@ export function CategorySidebar({
   return (
     <div className="w-64 flex-shrink-0">
       <div className="glass rounded-xl p-4 sticky top-4">
-        <h2 className="text-lg font-semibold mb-4 gradient-text">Categories</h2>
+        <h2 className="text-lg font-display font-bold mb-4 gradient-text tracking-tight">Categories</h2>
         
         <nav className="space-y-1">
           {/* All */}

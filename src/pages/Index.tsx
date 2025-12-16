@@ -77,12 +77,12 @@ const Index = () => {
               <motion.h2
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-2xl font-bold"
+                className="text-3xl font-display font-extrabold tracking-tight"
               >
                 {selectedCategory === 'all' ? 'All Images' : (
                   <span className="capitalize">{selectedCategory}s</span>
                 )}
-                <span className="text-muted-foreground font-normal ml-2 text-lg">
+                <span className="text-muted-foreground font-sans font-normal ml-3 text-lg">
                   ({filteredImages.length})
                 </span>
               </motion.h2>

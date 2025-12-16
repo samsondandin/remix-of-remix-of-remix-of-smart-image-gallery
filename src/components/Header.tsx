@@ -28,8 +28,8 @@ export function Header({ imageCount, isClassifierReady }: HeaderProps) {
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold gradient-text">SmartGallery</h1>
-              <p className="text-xs text-muted-foreground">AI-Powered Image Classification</p>
+              <h1 className="text-2xl font-display font-extrabold tracking-tight gradient-text">SmartGallery</h1>
+              <p className="text-xs text-muted-foreground font-medium tracking-wide uppercase">AI-Powered Classification</p>
             </div>
           </motion.div>
 
