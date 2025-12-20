@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { useGallery } from '@/hooks/useGallery';
 import { Header } from '@/components/Header';
 import { UploadZone } from '@/components/UploadZone';
-import { CategoryNav } from '@/components/CategoryNav';
 import { ImageGrid } from '@/components/ImageGrid';
 import { Loader2, Sparkles } from 'lucide-react';
 import { CATEGORIES } from '@/types/gallery';
@@ -19,7 +18,6 @@ const Index = () => {
     modelLoadStatus,
     uploadImages,
     deleteImage,
-    filteredImages,
     processingCount
   } = useGallery();
 
