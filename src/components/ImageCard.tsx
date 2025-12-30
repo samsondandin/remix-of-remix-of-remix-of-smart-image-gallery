@@ -16,6 +16,7 @@ interface ImageCardProps {
   image: GalleryImage;
   onDelete: (id: string) => void;
   index: number;
+  onOpen?: (index: number) => void;
 }
 
 export function ImageCard({ image, onDelete, index }: ImageCardProps) {
@@ -34,7 +35,7 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
         className="relative group"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={() => { console.debug('ImageCard clicked:', image.id); setShowDetails(true); }}
+        onClick={() => { console.debug('ImageCard clicked:', image.id); if (onOpen) onOpen(index); else setShowDetails(true); }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -96,7 +97,7 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
                 size="sm"
                 variant="secondary"
                 className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur text-white border-0"
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setShowDetails(true); }}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); if (onOpen) onOpen(index); else setShowDetails(true); }}
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View

@@ -9,6 +9,11 @@ interface ImageGridProps {
 }
 
 export function ImageGrid({ images, onDelete }: ImageGridProps) {
+  const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
+
+  const handleClose = () => setSelectedIndex(null);
+  const handleNext = () => setSelectedIndex((i) => (i === null ? null : (i + 1) % images.length));
+  const handlePrev = () => setSelectedIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length));
   if (images.length === 0) {
     return (
       <motion.div
@@ -36,9 +41,30 @@ export function ImageGrid({ images, onDelete }: ImageGridProps) {
             image={image}
             onDelete={onDelete}
             index={index}
+            onOpen={(i) => setSelectedIndex(i)}
           />
         ))}
       </AnimatePresence>
+      {selectedIndex !== null && (
+        // Lazy-load Lightbox to avoid SSR problems (client-only use)
+        <React.Suspense>
+          {/* @ts-ignore */}
+          <LightboxWrapper
+            images={images}
+            index={selectedIndex}
+            open={true}
+            onClose={handleClose}
+            onNext={handleNext}
+            onPrev={handlePrev}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 }
+
+// Dynamic import so it doesn't affect build if not used
+const LightboxWrapper: any = (props: any) => {
+  const Lightbox = require('./Lightbox').default;
+  return <Lightbox {...props} />;
+};
