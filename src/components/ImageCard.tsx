@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trash2, Eye, Sparkles, Info, Users } from 'lucide-react';
 import { GalleryImage, CATEGORIES } from '@/types/gallery';
@@ -34,10 +34,17 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
         className="relative group"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={() => setShowDetails(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setShowDetails(true);
+        }}
       >
         <div className={cn(
           'relative rounded-xl overflow-hidden border transition-all duration-300 bg-card',
-          isHovered ? 'shadow-md transform -translate-y-1' : ''
+          isHovered ? 'shadow-md transform -translate-y-1' : '',
+          'cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2'
         )}>
           {/* Image */}
           <div className="aspect-square bg-muted">
@@ -89,7 +96,7 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
                 size="sm"
                 variant="secondary"
                 className="flex-1 bg-white/10 hover:bg-white/20 backdrop-blur text-white border-0"
-                onClick={() => setShowDetails(true)}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); setShowDetails(true); }}
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View
@@ -98,7 +105,7 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
                 size="sm"
                 variant="secondary"
                 className="bg-white/10 hover:bg-destructive/80 backdrop-blur text-white border-0"
-                onClick={() => onDelete(image.id)}
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDelete(image.id); }}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
