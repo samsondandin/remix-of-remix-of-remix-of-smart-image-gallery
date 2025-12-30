@@ -21,8 +21,8 @@ export function SortMenu({ value, dir, onChange, onToggleDir }: SortMenuProps) {
         className="rounded-md px-2 py-1 bg-card border border-border text-sm"
       >
         <option value="date">Date (newest)</option>
-        <option value="confidence">Confidence</option>
-        <option value="faceCount">Face count</option>
+        <option value="confidence">Match</option>
+        <option value="faceCount">People detected</option>
       </select>
 
       <button

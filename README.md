@@ -49,14 +49,10 @@ This project is built with:
 - React
 - shadcn-ui
   
-Machine learning
+Automated tagging
 ----------------
 
-This project runs ML models for image classification and face detection. You have two options:
-
-1. Browser-side inference (default) — Models are downloaded in the browser via `@huggingface/transformers` and executed client-side. No token required but large downloads may occur.
-
-2. Proxy to Hugging Face Inference API (recommended for low-power devices) — Start the local proxy server which forwards requests to the HF Inference API. You'll need an HF token.
+The app provides optional automated image tagging and face detection to help organize your photos. You can run inference either in the browser (default) or via a lightweight proxy to Hugging Face if you prefer to avoid large browser downloads.
 
 Quick start (proxy mode):
 

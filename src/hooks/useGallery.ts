@@ -111,8 +111,8 @@ export function useGallery(): UseGalleryReturn {
           : '';
         
         toast({
-          title: 'Image classified',
-          description: `"${file.name}" categorized as ${category}${faceInfo} (${Math.round(confidence * 100)}% confidence)`
+          title: 'Image added',
+          description: `"${file.name}" tagged as ${category}${faceInfo} (${Math.round(confidence * 100)}% match)`
         });
       } catch (error) {
         console.error('Failed to process image:', error);

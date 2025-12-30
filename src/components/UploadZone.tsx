@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Upload, Image as ImageIcon, Tag } from 'lucide-react';
 
 interface UploadZoneProps {
   onUpload: (files: File[]) => void;
@@ -99,7 +99,7 @@ export function UploadZone({
           {/* Icon */}
           <div className="p-4 rounded-full bg-muted/60">
             {isProcessing ? (
-              <Sparkles className="w-7 h-7 text-primary animate-pulse" />
+              <Upload className="w-7 h-7 text-primary animate-spin" />
             ) : (
               <Upload className={`w-7 h-7 text-muted-foreground`} />
             )}
@@ -121,7 +121,7 @@ export function UploadZone({
             ) : isProcessing ? (
               <>
                 <p className="text-foreground font-medium">Processing {processingCount} image{processingCount > 1 ? 's' : ''}...</p>
-                <p className="text-muted-foreground text-sm">AI is classifying your images</p>
+                <p className="text-muted-foreground text-sm">Generating suggestions…</p>
               </>
             ) : (
               <>
@@ -143,8 +143,8 @@ export function UploadZone({
                 Multiple files
               </span>
               <span className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                AI-powered
+                <Tag className="w-3 h-3" />
+                Suggested tags
               </span>
             </div>
           )}

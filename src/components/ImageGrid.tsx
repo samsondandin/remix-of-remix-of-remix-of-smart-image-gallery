@@ -29,7 +29,7 @@ export function ImageGrid({ images, onDelete }: ImageGridProps) {
         </div>
         <h3 className="text-xl font-semibold mb-2">No images yet</h3>
         <p className="text-muted-foreground max-w-sm">
-          Upload some images to get started. Our AI will automatically classify and organize them.
+          Upload some images to get started. We'll automatically tag and organize them for you.
         </p>
       </motion.div>
     );

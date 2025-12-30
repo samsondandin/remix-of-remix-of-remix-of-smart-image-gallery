@@ -3,7 +3,7 @@ import { useGallery } from '@/hooks/useGallery';
 import { Header } from '@/components/Header';
 import { UploadZone } from '@/components/UploadZone';
 import { ImageGrid } from '@/components/ImageGrid';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Image as ImageIcon } from 'lucide-react';
 import { CATEGORIES } from '@/types/gallery';
 import { Link } from 'react-router-dom';
 import { getCategoryColor } from '@/services/imageClassifier';
@@ -76,7 +76,7 @@ const Index = () => {
         {/* Category Folders Grid */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-6">
-            <Sparkles className="w-6 h-6 text-primary" />
+            <ImageIcon className="w-6 h-6 text-primary" />
             <h2 className="text-2xl font-display font-extrabold tracking-tight">
               Your Image Folders
             </h2>

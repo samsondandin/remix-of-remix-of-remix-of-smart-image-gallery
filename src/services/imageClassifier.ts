@@ -14,7 +14,7 @@ export async function loadClassifier(
   if (loadPromise) return loadPromise;
   
   isLoading = true;
-  onProgress?.(0, 'Loading AI models...');
+  onProgress?.(0, 'Loading models...');
   
   const useProxy = import.meta.env.VITE_USE_HF_PROXY === 'true';
   if (useProxy) {
