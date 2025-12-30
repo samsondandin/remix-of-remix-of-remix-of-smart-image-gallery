@@ -1,3 +1,4 @@
+import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { GalleryImage } from '@/types/gallery';
 import { ImageCard } from './ImageCard';
@@ -11,7 +12,9 @@ interface ImageGridProps {
 export function ImageGrid({ images, onDelete }: ImageGridProps) {
   const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
 
-  const handleClose = () => setSelectedIndex(null);
+  const Lightbox = React.lazy(() => import('./Lightbox'));
+
+  const handleClose = () => { console.debug('Lightbox close'); setSelectedIndex(null); };
   const handleNext = () => setSelectedIndex((i) => (i === null ? null : (i + 1) % images.length));
   const handlePrev = () => setSelectedIndex((i) => (i === null ? null : (i - 1 + images.length) % images.length));
   if (images.length === 0) {
@@ -41,15 +44,13 @@ export function ImageGrid({ images, onDelete }: ImageGridProps) {
             image={image}
             onDelete={onDelete}
             index={index}
-            onOpen={(i) => setSelectedIndex(i)}
+            onOpen={(i) => { console.debug('Open requested for', i, images[i]?.id); setSelectedIndex(i); }}
           />
         ))}
       </AnimatePresence>
       {selectedIndex !== null && (
-        // Lazy-load Lightbox to avoid SSR problems (client-only use)
-        <React.Suspense>
-          {/* @ts-ignore */}
-          <LightboxWrapper
+        <React.Suspense fallback={null}>
+          <Lightbox
             images={images}
             index={selectedIndex}
             open={true}
@@ -63,8 +64,3 @@ export function ImageGrid({ images, onDelete }: ImageGridProps) {
   );
 }
 
-// Dynamic import so it doesn't affect build if not used
-const LightboxWrapper: any = (props: any) => {
-  const Lightbox = require('./Lightbox').default;
-  return <Lightbox {...props} />;
-};
