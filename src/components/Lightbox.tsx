@@ -26,10 +26,24 @@ export default function Lightbox({ images, index, open, onClose, onNext, onPrev 
 
   if (!open) return null;
 
+  // Guard against invalid index or empty images array which would throw and
+  // cause the React tree to error (blank page). If invalid, close and log.
+  if (!Array.isArray(images) || images.length === 0 || index < 0 || index >= images.length) {
+    console.error('Lightbox received invalid index/images', { index, imagesLength: images?.length });
+    // Close to avoid leaving the UI in a broken state
+    onClose();
+    return null;
+  }
+
   const img = images[index];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6">
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6"
+      onClick={onClose}
+    >
       <button
         aria-label="Close"
         onClick={onClose}
@@ -46,7 +60,7 @@ export default function Lightbox({ images, index, open, onClose, onNext, onPrev 
         <ArrowLeft className="w-6 h-6" />
       </button>
 
-      <div className="max-w-[95%] max-h-[90%] flex items-center justify-center">
+      <div className="max-w-[95%] max-h-[90%] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
         <img src={img.url} alt={img.filename || ''} className="max-w-full max-h-full object-contain rounded" />
       </div>
 
