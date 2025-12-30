@@ -34,11 +34,11 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
         className="relative group"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={() => setShowDetails(true)}
+        onClick={() => { console.debug('ImageCard clicked:', image.id); setShowDetails(true); }}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') setShowDetails(true);
+          if (e.key === 'Enter' || e.key === ' ') { console.debug('ImageCard keyopen:', image.id); setShowDetails(true); }
         }}
       >
         <div className={cn(
