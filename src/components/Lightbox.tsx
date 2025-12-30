@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface LightboxProps {
   images: { id: string; url: string; filename?: string }[];
@@ -11,6 +12,9 @@ interface LightboxProps {
 }
 
 export default function Lightbox({ images, index, open, onClose, onNext, onPrev }: LightboxProps) {
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!open) return;
 
@@ -37,12 +41,30 @@ export default function Lightbox({ images, index, open, onClose, onNext, onPrev 
 
   const img = images[index];
 
+  function handleTouchStart(e: React.TouchEvent) {
+    setTouchStartX(e.touches[0].clientX);
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (touchStartX === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    if (deltaX > 50) onPrev();
+    else if (deltaX < -50) onNext();
+    setTouchStartX(null);
+  }
+
   return (
-    <div
+    <motion.div
       role="dialog"
       aria-modal="true"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6"
       onClick={onClose}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <button
         aria-label="Close"

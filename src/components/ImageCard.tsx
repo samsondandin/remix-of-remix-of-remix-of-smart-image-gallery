@@ -46,8 +46,8 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
       >
         <div className={cn(
           'relative rounded-xl overflow-hidden border transition-all duration-300 bg-card',
-          isHovered ? 'shadow-md transform -translate-y-1' : '',
-          'cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2'
+          isHovered ? 'shadow-lg transform -translate-y-1 scale-[1.01]' : '',
+          'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary'
         )}>
           {/* Image */}
           <div className="aspect-square bg-muted">
@@ -56,6 +56,7 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
               alt={image.filename}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
+              decoding="async"
             />
           </div>
 
@@ -100,8 +101,9 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="flex-1 bg-white/6 hover:bg-white/10 text-foreground border-0"
+                className="flex-1 bg-white/6 hover:bg-white/10 text-foreground border-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); if (onOpen) onOpen(index); else setShowDetails(true); }}
+                aria-label={`View ${image.filename}`}
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View
@@ -109,8 +111,9 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
               <Button
                 size="sm"
                 variant="secondary"
-                className="bg-white/6 hover:bg-destructive/80 text-foreground border-0"
+                className="bg-white/6 hover:bg-destructive/80 text-foreground border-0 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-destructive"
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); onDelete(image.id); }}
+                aria-label={`Delete ${image.filename}`}
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
