@@ -8,6 +8,9 @@ import { CATEGORIES } from '@/types/gallery';
 import { Link } from 'react-router-dom';
 import { getCategoryColor } from '@/services/imageClassifier';
 import { cn } from '@/lib/utils';
+import SortMenu from '@/components/SortMenu';
+import { sortImages, type SortKey } from '@/lib/utils';
+import { useState } from 'react';
 
 const Index = () => {
   const {
@@ -20,6 +23,9 @@ const Index = () => {
     deleteImage,
     processingCount
   } = useGallery();
+
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
 
   const getCategoryCount = (categoryId: string): number => {
     return images.filter(img => img.category === categoryId).length;
@@ -107,10 +113,18 @@ const Index = () => {
         {/* Recent Images Preview */}
         {images.length > 0 && (
           <div>
-            <h3 className="text-xl font-display font-bold mb-4 tracking-tight">
-              Recently Added
-            </h3>
-            <ImageGrid images={images.slice(0, 8)} onDelete={deleteImage} />
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-display font-bold tracking-tight">Recently Added</h3>
+              <div>
+                <SortMenu
+                  value={sortKey}
+                  dir={sortDir}
+                  onChange={(v) => setSortKey(v)}
+                  onToggleDir={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+                />
+              </div>
+            </div>
+            <ImageGrid images={sortImages(images, sortKey, sortDir).slice(0, 8)} onDelete={deleteImage} />
             {images.length > 8 && (
               <div className="text-center mt-6">
                 <Link 
@@ -128,6 +142,7 @@ const Index = () => {
   );
 };
 
+
 interface FolderCardProps {
   to: string;
   label: string;
@@ -141,7 +156,7 @@ function FolderCard({ to, label, icon, count, colorClass, description }: FolderC
   return (
     <Link to={to}>
       <motion.div
-        className="glass rounded-2xl p-5 cursor-pointer group relative overflow-hidden"
+        className="rounded-xl p-5 cursor-pointer relative overflow-hidden bg-card border border-border/60 hover:shadow-md"
         whileHover={{ scale: 1.02, y: -4 }}
         whileTap={{ scale: 0.98 }}
         initial={{ opacity: 0, y: 20 }}
@@ -149,18 +164,15 @@ function FolderCard({ to, label, icon, count, colorClass, description }: FolderC
       >
         {/* Color accent */}
         {colorClass && (
-          <div className={cn(
-            'absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-30',
-            colorClass
-          )} />
+          <div className={cn('absolute top-4 right-4 w-12 h-12 rounded-full opacity-30', colorClass)} />
         )}
         
         <div className="relative">
           {/* Icon */}
-          <div className="text-4xl mb-3">{icon}</div>
+          <div className="text-3xl mb-3">{icon}</div>
           
           {/* Label */}
-          <h3 className="font-display font-bold text-lg tracking-tight group-hover:text-primary transition-colors">
+          <h3 className="font-display font-semibold text-lg tracking-tight group-hover:text-primary transition-colors">
             {label}
           </h3>
           

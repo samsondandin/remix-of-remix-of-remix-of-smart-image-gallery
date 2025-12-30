@@ -36,9 +36,8 @@ export function ImageCard({ image, onDelete, index }: ImageCardProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         <div className={cn(
-          'relative rounded-xl overflow-hidden border-2 transition-all duration-300',
-          getCategoryBorderColor(image.category),
-          isHovered ? 'shadow-glow border-opacity-100' : 'border-opacity-30'
+          'relative rounded-xl overflow-hidden border transition-all duration-300 bg-card',
+          isHovered ? 'shadow-md transform -translate-y-1' : ''
         )}>
           {/* Image */}
           <div className="aspect-square bg-muted">

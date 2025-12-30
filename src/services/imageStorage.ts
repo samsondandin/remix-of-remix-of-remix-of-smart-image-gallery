@@ -10,13 +10,19 @@ export async function saveImage(image: GalleryImage, imageData: string): Promise
   
   // Save metadata
   const images = await getImages();
-  images.push(image);
+  // Persist newest images first so the UI shows recent uploads immediately after reload
+  images.unshift(image);
   await set(IMAGES_KEY, images);
 }
 
 export async function getImages(): Promise<GalleryImage[]> {
   const images = await get<GalleryImage[]>(IMAGES_KEY);
-  return images || [];
+  // Ensure uploadedAt is a Date when returning from storage
+  if (!images) return [];
+  return images.map(img => ({
+    ...img,
+    uploadedAt: img.uploadedAt ? new Date(img.uploadedAt as unknown as string) : new Date()
+  }));
 }
 
 export async function getImageData(imageId: string): Promise<string | undefined> {

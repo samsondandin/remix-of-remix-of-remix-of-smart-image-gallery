@@ -1,22 +1,12 @@
-# Welcome to your Lovable project
+# Welcome to your project
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
-
 ## How can I edit this code?
 
-There are several ways of editing your application.
+There are several ways of editing your application. Use your preferred IDE or GitHub to make changes locally and push them to this repository.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+If you want to work locally using your own IDE, you can clone this repo and push changes.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -58,16 +48,28 @@ This project is built with:
 - TypeScript
 - React
 - shadcn-ui
+  
+Machine learning
+----------------
+
+This project runs ML models for image classification and face detection. You have two options:
+
+1. Browser-side inference (default) — Models are downloaded in the browser via `@huggingface/transformers` and executed client-side. No token required but large downloads may occur.
+
+2. Proxy to Hugging Face Inference API (recommended for low-power devices) — Start the local proxy server which forwards requests to the HF Inference API. You'll need an HF token.
+
+Quick start (proxy mode):
+
+1. Copy `.env.example` to `.env` and set `HF_API_TOKEN` and `VITE_USE_HF_PROXY=true`.
+2. Install dependencies: `npm install`.
+3. Start both servers: `npm run dev:all` (runs the proxy server and the Vite dev server).
+
+Notes:
+- The proxy server listens on `http://localhost:3001` and Vite proxies `/api` to it.
+- Do NOT commit your `.env` with a token; use environment variables in CI instead.
+
 - Tailwind CSS
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Build the project and deploy using your preferred static hosting platform (Netlify, Vercel, etc.) or follow your organization's deployment process.

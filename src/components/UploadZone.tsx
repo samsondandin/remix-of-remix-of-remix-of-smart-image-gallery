@@ -74,12 +74,8 @@ export function UploadZone({
       <label
         htmlFor="file-upload"
         className={`
-          relative block cursor-pointer rounded-xl border-2 border-dashed
-          transition-all duration-300 overflow-hidden
-          ${isDragging 
-            ? 'border-primary bg-primary/10' 
-            : 'border-border hover:border-primary/50 hover:bg-card/50'
-          }
+          relative block cursor-pointer rounded-xl border transition-all duration-300 overflow-hidden bg-card
+          ${isDragging ? 'ring-2 ring-primary/20 border-primary/60' : 'border-border/60 hover:shadow-md'}
           ${!isClassifierReady ? 'pointer-events-none opacity-70' : ''}
         `}
         onDragEnter={handleDragIn}
@@ -101,20 +97,13 @@ export function UploadZone({
 
         <div className="relative p-8 flex flex-col items-center gap-4">
           {/* Icon */}
-          <motion.div
-            className={`
-              p-4 rounded-full 
-              ${isDragging ? 'bg-primary/20' : 'bg-muted'}
-            `}
-            animate={isDragging ? { scale: [1, 1.1, 1] } : {}}
-            transition={{ repeat: Infinity, duration: 1 }}
-          >
+          <div className="p-4 rounded-full bg-muted/60">
             {isProcessing ? (
-              <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+              <Sparkles className="w-7 h-7 text-primary animate-pulse" />
             ) : (
-              <Upload className={`w-8 h-8 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+              <Upload className={`w-7 h-7 text-muted-foreground`} />
             )}
-          </motion.div>
+          </div>
 
           {/* Text */}
           <div className="text-center">
@@ -123,7 +112,7 @@ export function UploadZone({
                 <p className="text-foreground font-medium mb-1">{modelStatus}</p>
                 <div className="w-48 h-2 bg-muted rounded-full overflow-hidden mx-auto">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-accent"
+                    className="h-full bg-primary"
                     initial={{ width: 0 }}
                     animate={{ width: `${modelProgress}%` }}
                   />
@@ -137,10 +126,10 @@ export function UploadZone({
             ) : (
               <>
                 <p className="text-foreground font-medium">
-                  {isDragging ? 'Drop images here' : 'Drag & drop images here'}
+                  {isDragging ? 'Drop images here' : 'Click or drag images to upload'}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  or click to browse • Supports JPG, PNG, WebP
+                  Supports JPG, PNG, WebP • Multiple files
                 </p>
               </>
             )}

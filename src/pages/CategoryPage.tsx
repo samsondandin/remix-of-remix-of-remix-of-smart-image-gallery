@@ -9,6 +9,9 @@ import { Category, CATEGORIES } from '@/types/gallery';
 import { Loader2, FolderOpen, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
+import SortMenu from '@/components/SortMenu';
+import { sortImages, type SortKey } from '@/lib/utils';
+import { useState } from 'react';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
@@ -34,6 +37,11 @@ const CategoryPage = () => {
   const categoryImages = categoryId === 'all' 
     ? images 
     : images.filter(img => img.category === categoryId);
+
+  // Debug logs to help diagnose routing / rendering issues
+  // (temporary - safe to remove after debugging)
+  // eslint-disable-next-line no-console
+  console.log('CategoryPage:', { categoryId, imagesLength: images.length, categoryImagesLength: categoryImages.length, isValidCategory, isLoading });
 
   // Sync selected category with URL
   useEffect(() => {
@@ -75,6 +83,18 @@ const CategoryPage = () => {
 
   const categoryLabel = categoryId === 'all' ? 'All Images' : category?.label || categoryId;
   const categoryIcon = categoryId === 'all' ? '🖼️' : category?.icon || '📁';
+
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
+
+  // Dev-only debug info rendered on the page to help reproduce the issue without DevTools
+  const debugInfo = {
+    categoryId,
+    isValidCategory,
+    isLoading,
+    totalImages: images.length,
+    categoryImages: categoryImages.length
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,7 +168,17 @@ const CategoryPage = () => {
           )}
 
           {/* Image grid */}
-          <ImageGrid images={categoryImages} onDelete={deleteImage} />
+          {import.meta.env.DEV && (
+            <div className="fixed right-4 bottom-4 z-50 w-80 p-3 rounded-lg bg-black/70 text-xs text-white glass">
+              <strong className="block mb-1">Debug</strong>
+              <pre className="whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
+            </div>
+          )}
+          <div className="flex items-center justify-between mb-4">
+            <div />
+            <SortMenu value={sortKey} dir={sortDir} onChange={v => setSortKey(v)} onToggleDir={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')} />
+          </div>
+          <ImageGrid images={sortImages(categoryImages, sortKey, sortDir)} onDelete={deleteImage} />
         </div>
       </main>
     </div>
@@ -156,3 +186,7 @@ const CategoryPage = () => {
 };
 
 export default CategoryPage;
+
+// touch to trigger HMR
+
+// trigger HMR

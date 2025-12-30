@@ -16,6 +16,22 @@ export async function loadClassifier(
   isLoading = true;
   onProgress?.(0, 'Loading AI models...');
   
+  const useProxy = import.meta.env.VITE_USE_HF_PROXY === 'true';
+  if (useProxy) {
+    // Provide a thin wrapper that proxies classification requests to the server
+    classifier = async (imageUrl: string, opts?: any) => {
+      const res = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl })
+      });
+      return res.json();
+    };
+    isLoading = false;
+    onProgress?.(100, 'Models ready (proxy)');
+    return classifier;
+  }
+  
   // Load both models in parallel
   const classifierPromise = pipeline(
     'image-classification',
@@ -62,7 +78,20 @@ export async function classifyImage(
   
   // Run classification and face detection in parallel
   const [classificationResults, faceResults] = await Promise.all([
-    model(imageUrl, { topk: 5 }) as Promise<ClassificationResult[]>,
+    (async () => {
+      try {
+        const res = await model(imageUrl, { topk: 5 }) as ClassificationResult[] | { error?: any };
+        if (Array.isArray(res)) return res;
+        if ((res as any).error) {
+          console.warn('Classifier proxy error:', (res as any).error);
+          return [] as ClassificationResult[];
+        }
+        return [] as ClassificationResult[];
+      } catch (err) {
+        console.error('Classifier call failed:', err);
+        return [] as ClassificationResult[];
+      }
+    })(),
     detectFaces(imageUrl)
   ]);
   

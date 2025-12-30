@@ -13,6 +13,22 @@ export async function loadFaceDetector(
   
   isLoading = true;
   onProgress?.(0, 'Loading face detection model...');
+
+  const useProxy = import.meta.env.VITE_USE_HF_PROXY === 'true';
+  if (useProxy) {
+    // Provide a thin wrapper that proxies detection requests to the server
+    detector = async (imageUrl: string) => {
+      const res = await fetch('/api/detect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl })
+      });
+      return res.json();
+    };
+    isLoading = false;
+    onProgress?.(100, 'Face detector ready (proxy)!');
+    return detector;
+  }
   
   loadPromise = pipeline(
     'object-detection',
@@ -64,17 +80,26 @@ export async function detectFaces(imageUrl: string): Promise<{
   detections: DetectionResult[];
 }> {
   const model = await loadFaceDetector();
-  
-  const results = await model(imageUrl) as DetectionResult[];
-  
-  // Filter for person detections (DETR detects "person" which includes faces)
-  const personDetections = results.filter(
-    (r) => r.label.toLowerCase() === 'person' && r.score > 0.7
-  );
-  
-  return {
-    hasFaces: personDetections.length > 0,
-    faceCount: personDetections.length,
-    detections: personDetections
-  };
+  try {
+    const results = await model(imageUrl) as DetectionResult[] | { error?: any };
+
+    if (!Array.isArray(results)) {
+      if ((results as any).error) console.warn('Detector proxy error:', (results as any).error);
+      return { hasFaces: false, faceCount: 0, detections: [] };
+    }
+
+    // Filter for person detections (DETR detects "person" which includes faces)
+    const personDetections = results.filter(
+      (r) => r.label.toLowerCase() === 'person' && r.score > 0.7
+    );
+
+    return {
+      hasFaces: personDetections.length > 0,
+      faceCount: personDetections.length,
+      detections: personDetections
+    };
+  } catch (err) {
+    console.error('Face detector call failed:', err);
+    return { hasFaces: false, faceCount: 0, detections: [] };
+  }
 }

@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, Brain, Zap } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
+import ThemeSelector from './ThemeSelector';
 
 interface HeaderProps {
   imageCount: number;
@@ -17,15 +19,11 @@ export function Header({ imageCount, isClassifierReady }: HeaderProps) {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <div className="relative">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-accent">
-                <Brain className="w-6 h-6 text-white" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary-foreground" />
               </div>
-              <motion.div
-                className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-category-animal"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-              />
+              <span className="text-sm text-muted-foreground">SmartGallery</span>
             </div>
             <div>
               <h1 className="text-2xl font-display font-extrabold tracking-tight gradient-text">SmartGallery</h1>
@@ -41,9 +39,9 @@ export function Header({ imageCount, isClassifierReady }: HeaderProps) {
           >
             {/* Image count */}
             <div className="flex items-center gap-2 text-sm">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">
-                <span className="font-semibold text-foreground">{imageCount}</span> images
+                <span className="font-medium text-foreground">{imageCount}</span> images
               </span>
             </div>
 
@@ -58,6 +56,10 @@ export function Header({ imageCount, isClassifierReady }: HeaderProps) {
                 {isClassifierReady ? 'AI Ready' : 'Loading AI...'}
               </span>
               <Zap className={`w-4 h-4 ${isClassifierReady ? 'text-category-animal' : 'text-muted-foreground'}`} />
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeSelector />
+              <ThemeToggle />
             </div>
           </motion.div>
         </div>
