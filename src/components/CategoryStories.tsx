@@ -1,0 +1,51 @@
+import React from 'react';
+import { CATEGORIES, Category } from '@/types/gallery';
+
+interface Props {
+  activeCategory: Category | 'all';
+  onSelect: (cat: Category | 'all') => void;
+}
+
+export const CategoryStories: React.FC<Props> = ({ activeCategory, onSelect }) => {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-4 pt-2 px-2 scrollbar-hide">
+      {/* "All Photos" Story */}
+      <button
+        onClick={() => onSelect('all')}
+        className={`flex flex-col items-center gap-2 min-w-[70px] transition-transform hover:scale-105 ${
+          activeCategory === 'all' ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+        }`}
+      >
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl border-2 ${
+          activeCategory === 'all' ? 'border-primary bg-primary/20' : 'border-white/10 bg-white/5'
+        }`}>
+          🖼️
+        </div>
+        <span className="text-xs font-medium">All</span>
+      </button>
+
+      {/* Dynamic Categories */}
+      {CATEGORIES.map((cat) => (
+        <button
+          key={cat.id}
+          onClick={() => onSelect(cat.id)}
+          className={`flex flex-col items-center gap-2 min-w-[70px] transition-transform hover:scale-105 ${
+            activeCategory === cat.id ? 'opacity-100' : 'opacity-70 hover:opacity-100'
+          }`}
+        >
+          {/* The "Story Ring" with Gradient Border */}
+          <div className={`p-[2px] rounded-full ${
+            activeCategory === cat.id 
+              ? 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500' // Instagram style gradient
+              : 'bg-transparent border-2 border-white/10'
+          }`}>
+             <div className="w-[60px] h-[60px] rounded-full bg-card flex items-center justify-center text-2xl backdrop-blur-md">
+               {cat.icon}
+             </div>
+          </div>
+          <span className="text-xs font-medium truncate w-full text-center">{cat.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};

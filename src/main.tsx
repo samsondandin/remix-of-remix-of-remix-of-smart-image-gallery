@@ -1,10 +1,19 @@
+import React from 'react';
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
+import { Toaster } from 'sonner';
+import App from "./App";
 import "./index.css";
-import { UISettingsProvider } from './context/UISettingsContext';
+import { ThemeProvider } from "./context/ThemeContext";
 
-createRoot(document.getElementById("root")!).render(
-	<UISettingsProvider>
-		<App />
-	</UISettingsProvider>
-);
+const rootElement = document.getElementById("root");
+
+if (!rootElement) {
+  console.error("CRASH: Could not find <div id='root'> in index.html");
+} else {
+  createRoot(rootElement).render(
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <App />
+      <Toaster position="bottom-right" richColors />
+    </ThemeProvider>
+  );
+}

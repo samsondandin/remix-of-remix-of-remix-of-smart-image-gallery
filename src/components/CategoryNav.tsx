@@ -1,102 +1,57 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Category, CATEGORIES, GalleryImage } from '@/types/gallery';
-import { getCategoryColor } from '@/services/imageClassifier';
-import { cn } from '@/lib/utils';
-import { FolderOpen, ChevronRight } from 'lucide-react';
+import { CATEGORIES, Category, GalleryImage, Person } from '@/types/gallery';
 
 interface CategoryNavProps {
-  currentCategory: Category | 'all';
+  onSelect: (category: Category | 'all') => void;
   images: GalleryImage[];
+  knownPeople?: Person[]; 
 }
 
-export function CategoryNav({ currentCategory, images }: CategoryNavProps) {
-  const getCategoryCount = (categoryId: Category | 'all'): number => {
-    if (categoryId === 'all') return images.length;
-    return images.filter(img => img.category === categoryId).length;
-  };
+export function CategoryNav({ onSelect, images, knownPeople = [] }: CategoryNavProps) {
+  const getCount = (id: string) => images.filter(img => img.category === id).length;
 
   return (
-    <div className="glass rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-4">
-        <FolderOpen className="w-5 h-5 text-primary" />
-        <h2 className="font-display font-bold text-lg tracking-tight">Image Folders</h2>
-      </div>
-      
-      <div className="flex flex-wrap gap-2">
-        {/* All Images */}
-        <CategoryPill
-          to="/category/all"
-          label="All Images"
-          icon="🖼️"
-          count={getCategoryCount('all')}
-          isActive={currentCategory === 'all'}
-        />
-        
-        {/* Category Pills */}
-        {CATEGORIES.map((cat) => (
-          <CategoryPill
-            key={cat.id}
-            to={`/category/${cat.id}`}
-            label={cat.label}
-            icon={cat.icon}
-            count={getCategoryCount(cat.id)}
-            isActive={currentCategory === cat.id}
-            colorClass={getCategoryColor(cat.id)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-interface CategoryPillProps {
-  to: string;
-  label: string;
-  icon: string;
-  count: number;
-  isActive: boolean;
-  colorClass?: string;
-}
-
-function CategoryPill({ to, label, icon, count, isActive, colorClass }: CategoryPillProps) {
-  return (
-    <Link to={to}>
-      <motion.div
-        className={cn(
-          'flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-200',
-          'border-2 cursor-pointer group',
-          isActive
-            ? 'bg-primary/20 border-primary text-foreground shadow-lg shadow-primary/20'
-            : 'bg-background/50 border-border/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
-        )}
-        whileHover={{ scale: 1.02, y: -2 }}
-        whileTap={{ scale: 0.98 }}
+    <div className="flex flex-wrap gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+      {/* 1. ALL PHOTOS BUTTON */}
+      <button
+        onClick={() => onSelect('all')}
+        className="px-6 py-3 rounded-2xl bg-muted hover:bg-muted/80 transition-all font-medium flex items-center gap-2"
       >
-        {/* Icon */}
-        <span className="text-lg">{icon}</span>
-        
-        {/* Label */}
-        <span className="font-medium text-sm">{label}</span>
-        
-        {/* Count Badge */}
-        <span className={cn(
-          'px-2 py-0.5 rounded-full text-xs font-bold',
-          isActive ? 'bg-primary text-primary-foreground' : 'bg-muted'
-        )}>
-          {count}
-        </span>
-        
-        {/* Arrow indicator for active */}
-        {isActive && (
-          <motion.span
-            initial={{ opacity: 0, x: -5 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <ChevronRight className="w-4 h-4 text-primary" />
-          </motion.span>
-        )}
-      </motion.div>
-    </Link>
+        🖼️ All Photos <span className="opacity-40">{images.length}</span>
+      </button>
+
+      {/* 2. DYNAMIC PEOPLE BUTTONS (Sampson, Mom, etc.) */}
+      {knownPeople.map((person) => (
+        <button
+          key={person.id}
+          onClick={() => onSelect(person.name)}
+          className="px-6 py-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 transition-all font-bold text-indigo-500 flex items-center gap-2 group"
+        >
+          <img 
+            src={person.avatarUrl} 
+            className="w-5 h-5 rounded-full object-cover" 
+            alt={person.name} 
+          />
+          <span>{person.name}</span>
+          <span className="opacity-40 group-hover:opacity-100 transition-opacity">
+            {getCount(person.name)}
+          </span>
+        </button>
+      ))}
+      
+      {/* 3. STANDARD CATEGORIES (Animals, Vehicles, etc.) */}
+      {CATEGORIES.map((cat) => (
+        <button
+          key={cat.id}
+          onClick={() => onSelect(cat.id)}
+          className="px-6 py-3 rounded-2xl bg-card border border-foreground/5 hover:border-primary/30 transition-all font-medium flex items-center gap-2 group"
+        >
+          <span>{cat.icon}</span>
+          <span>{cat.label}</span>
+          <span className="opacity-40 group-hover:opacity-100 transition-opacity">
+            {getCount(cat.id)}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 }

@@ -26,7 +26,8 @@ const CategoryPage = () => {
     uploadImages,
     deleteImage,
     processingCount,
-    setSelectedCategory
+    setSelectedCategory,
+    changeCategory
   } = useGallery();
 
   // Find category info
@@ -38,10 +39,8 @@ const CategoryPage = () => {
     ? images 
     : images.filter(img => img.category === categoryId);
 
-  // Debug logs to help diagnose routing / rendering issues
-  // (temporary - safe to remove after debugging)
-  // eslint-disable-next-line no-console
-  console.log('CategoryPage:', { categoryId, imagesLength: images.length, categoryImagesLength: categoryImages.length, isValidCategory, isLoading });
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
 
   // Sync selected category with URL
   useEffect(() => {
@@ -83,18 +82,6 @@ const CategoryPage = () => {
 
   const categoryLabel = categoryId === 'all' ? 'All Images' : category?.label || categoryId;
   const categoryIcon = categoryId === 'all' ? '🖼️' : category?.icon || '📁';
-
-  const [sortKey, setSortKey] = useState<SortKey>('date');
-  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
-
-  // Dev-only debug info rendered on the page to help reproduce the issue without DevTools
-  const debugInfo = {
-    categoryId,
-    isValidCategory,
-    isLoading,
-    totalImages: images.length,
-    categoryImages: categoryImages.length
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,17 +155,15 @@ const CategoryPage = () => {
           )}
 
           {/* Image grid */}
-          {import.meta.env.DEV && (
-            <div className="fixed right-4 bottom-4 z-50 w-80 p-3 rounded-lg bg-black/70 text-xs text-white glass">
-              <strong className="block mb-1">Debug</strong>
-              <pre className="whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
-            </div>
-          )}
           <div className="flex items-center justify-between mb-4">
             <div />
             <SortMenu value={sortKey} dir={sortDir} onChange={v => setSortKey(v)} onToggleDir={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')} />
           </div>
-          <ImageGrid images={sortImages(categoryImages, sortKey, sortDir)} onDelete={deleteImage} />
+          <ImageGrid
+            images={sortImages(categoryImages, sortKey, sortDir)}
+            onDelete={deleteImage}
+            onChangeCategory={changeCategory}
+          />
         </div>
       </main>
     </div>

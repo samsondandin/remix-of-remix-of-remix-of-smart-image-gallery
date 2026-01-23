@@ -1,101 +1,50 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { X, ArrowLeft, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React, { useEffect } from 'react';
+import { X, Trash, Tag } from 'lucide-react';
+import { GalleryImage } from '@/types/gallery';
 
-interface LightboxProps {
-  images: { id: string; url: string; filename?: string }[];
-  index: number;
-  open: boolean;
+interface Props {
+  image: GalleryImage | null;
   onClose: () => void;
-  onNext: () => void;
-  onPrev: () => void;
+  onDelete: (id: string) => void;
 }
 
-export default function Lightbox({ images, index, open, onClose, onNext, onPrev }: LightboxProps) {
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
+export function Lightbox({ image, onClose, onDelete }: Props) {
   useEffect(() => {
-    if (!open) return;
+    const handleEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
 
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowRight') onNext();
-      if (e.key === 'ArrowLeft') onPrev();
-    }
-
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose, onNext, onPrev]);
-
-  if (!open) return null;
-
-  // Guard against invalid index or empty images array which would throw and
-  // cause the React tree to error (blank page). If invalid, close and log.
-  if (!Array.isArray(images) || images.length === 0 || index < 0 || index >= images.length) {
-    console.error('Lightbox received invalid index/images', { index, imagesLength: images?.length });
-    // Close to avoid leaving the UI in a broken state
-    onClose();
-    return null;
-  }
-
-  const img = images[index];
-
-  function handleTouchStart(e: React.TouchEvent) {
-    setTouchStartX(e.touches[0].clientX);
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (touchStartX === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX;
-    if (deltaX > 50) onPrev();
-    else if (deltaX < -50) onNext();
-    setTouchStartX(null);
-  }
+  if (!image) return null;
 
   return (
-    <motion.div
-      role="dialog"
-      aria-modal="true"
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-6"
-      onClick={onClose}
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      <button
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute top-6 right-6 p-2 rounded-md text-white hover:bg-white/10"
-      >
-        <X className="w-6 h-6" />
+    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex items-center justify-center animate-in fade-in duration-200">
+      
+      <button onClick={onClose} className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors">
+        <X size={24} />
       </button>
 
-      <button
-        aria-label="Previous"
-        onClick={(e) => { e.stopPropagation(); onPrev(); }}
-        className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-md text-white hover:bg-white/10"
-      >
-        <ArrowLeft className="w-6 h-6" />
-      </button>
-
-      <div className="max-w-[95%] max-h-[90%] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-        <img src={img.url} alt={img.filename || ''} className="max-w-full max-h-full object-contain rounded" />
-      </div>
-
-      <button
-        aria-label="Next"
-        onClick={(e) => { e.stopPropagation(); onNext(); }}
-        className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-md text-white hover:bg-white/10"
-      >
-        <ArrowRight className="w-6 h-6" />
-      </button>
-
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/80">
-        {index + 1} / {images.length}
+      <div className="relative max-w-[95vw] max-h-[85vh] flex flex-col items-center">
+        <img 
+          src={image.url} 
+          className="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain" 
+        />
+        
+        <div className="mt-6 flex items-center gap-6 text-white/90 bg-white/10 px-6 py-3 rounded-full backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <Tag size={16} />
+            <span className="font-bold capitalize">{image.category}</span>
+          </div>
+          <span className="text-white/30">|</span>
+          <span className="text-sm opacity-70">{new Date(image.uploadedAt).toLocaleDateString()}</span>
+          <span className="text-white/30">|</span>
+          <button 
+             onClick={() => { onDelete(image.id); onClose(); }}
+             className="flex items-center gap-2 text-red-400 hover:text-red-300 font-medium transition-colors"
+          >
+            <Trash size={16} /> Delete
+          </button>
+        </div>
       </div>
     </div>
   );

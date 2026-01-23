@@ -1,162 +1,73 @@
 import { pipeline } from '@huggingface/transformers';
-import { Category, ClassificationResult, CATEGORIES } from '@/types/gallery';
-import { detectFaces, loadFaceDetector } from './faceDetector';
+import { CATEGORIES } from '@/types/gallery';
 
+// Singleton
 let classifier: any = null;
-let isLoading = false;
-let loadPromise: Promise<any> | null = null;
 
-export async function loadClassifier(
-  onProgress?: (progress: number, status: string) => void
-): Promise<any> {
-  if (classifier) return classifier;
-  
-  if (loadPromise) return loadPromise;
-  
-  isLoading = true;
-  onProgress?.(0, 'Loading models...');
-  
-  const useProxy = import.meta.env.VITE_USE_HF_PROXY === 'true';
-  if (useProxy) {
-    // Provide a thin wrapper that proxies classification requests to the server
-    classifier = async (imageUrl: string, opts?: any) => {
-      const res = await fetch('/api/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl })
-      });
-      return res.json();
-    };
-    isLoading = false;
-    onProgress?.(100, 'Models ready (proxy)');
-    return classifier;
-  }
-  
-  // Load both models in parallel
-  const classifierPromise = pipeline(
-    'image-classification',
-    'onnx-community/mobilenetv4_conv_small.e2400_r224_in1k',
-    {
-      progress_callback: (progress: any) => {
-        if (progress.status === 'progress' && progress.progress) {
-          onProgress?.(Math.round(progress.progress * 0.5), 'Downloading classifier...');
-        }
-      }
-    }
-  );
-  
-  const faceDetectorPromise = loadFaceDetector((progress, status) => {
-    onProgress?.(50 + Math.round(progress * 0.5), status);
-  });
-  
-  loadPromise = Promise.all([classifierPromise, faceDetectorPromise]).then(([c]) => c);
-  
+export async function classifyImage(imageUrl: string): Promise<{ category: string; confidence: number; rawLabels: string[] }> {
   try {
-    classifier = await loadPromise;
-    isLoading = false;
-    onProgress?.(100, 'Models ready!');
-    return classifier;
-  } catch (error) {
-    loadPromise = null;
-    isLoading = false;
-    throw error;
-  }
-}
+    // 1. Load the ResNet Model (Reliable & Good General Knowledge)
+    if (!classifier) {
+      console.log("🧠 Loading Smart Classifier...");
+      // Using ResNet-50 for broad object recognition
+      classifier = await pipeline('image-classification', 'Xenova/resnet-50');
+    }
 
-export function isClassifierLoading(): boolean {
-  return isLoading;
-}
-
-export function isClassifierReady(): boolean {
-  return classifier !== null;
-}
-
-export async function classifyImage(
-  imageUrl: string
-): Promise<{ category: Category; confidence: number; rawLabels: ClassificationResult[]; faceCount: number }> {
-  const model = await loadClassifier();
-  
-  // Run classification and face detection in parallel
-  const [classificationResults, faceResults] = await Promise.all([
-    (async () => {
-      try {
-        const res = await model(imageUrl, { topk: 5 }) as ClassificationResult[] | { error?: any };
-        if (Array.isArray(res)) return res;
-        if ((res as any).error) {
-          console.warn('Classifier proxy error:', (res as any).error);
-          return [] as ClassificationResult[];
-        }
-        return [] as ClassificationResult[];
-      } catch (err) {
-        console.error('Classifier call failed:', err);
-        return [] as ClassificationResult[];
-      }
-    })(),
-    detectFaces(imageUrl)
-  ]);
-  
-  // If faces/people detected, prioritize portrait category
-  if (faceResults.hasFaces) {
-    return {
-      category: 'portrait',
-      confidence: Math.max(faceResults.detections[0]?.score || 0.8, classificationResults[0]?.score || 0),
-      rawLabels: classificationResults,
-      faceCount: faceResults.faceCount
-    };
-  }
-  
-  // Otherwise use standard classification
-  const category = mapLabelsToCategory(classificationResults);
-  const confidence = classificationResults[0]?.score || 0;
-  
-  return {
-    category,
-    confidence,
-    rawLabels: classificationResults,
-    faceCount: 0
-  };
-}
-
-function mapLabelsToCategory(labels: ClassificationResult[]): Category {
-  const allLabelsText = labels.map(l => l.label.toLowerCase()).join(' ');
-  
-  for (const cat of CATEGORIES) {
-    if (cat.id === 'other') continue;
+    // 2. Run Analysis
+    const results = await classifier(imageUrl);
     
-    for (const keyword of cat.keywords) {
-      if (allLabelsText.includes(keyword.toLowerCase())) {
-        return cat.id;
+    // Get Top 5 Predictions (not just 1) to understand context
+    const topResults = results.slice(0, 5); 
+    const rawLabels = topResults.map((r: any) => r.label.toLowerCase());
+    const topScore = topResults[0].score;
+    
+    console.log("AI Sees (Top 5):", rawLabels);
+
+    // 3. PRIORITY MATCHING ALGORITHM
+    // We look for matches in ALL top 5 labels.
+    // If we find "Groom" (Person, Priority 1) and "Mosque" (Building, Priority 9),
+    // we pick "Person" because 1 < 9.
+    
+    let bestCategory = 'other';
+    let currentBestPriority = 99; // Start high (worst priority)
+
+    // Check every label the AI saw
+    for (const label of rawLabels) {
+      // Check every category definition
+      for (const cat of CATEGORIES) {
+        if (cat.id === 'other') continue;
+
+        // Does this label match a keyword? (e.g., label 'groom' matches keyword 'groom')
+        const isMatch = cat.keywords.some(keyword => label.includes(keyword));
+
+        if (isMatch) {
+          // If we found a match, is it "more important" than what we already found?
+          if (cat.priority < currentBestPriority) {
+             bestCategory = cat.id;
+             currentBestPriority = cat.priority;
+          }
+        }
       }
     }
+
+    // 4. Special Override for Text/Screenshots (ResNet is bad at reading)
+    if (rawLabels.some((l: string) => l.includes('web site') || l.includes('screen') || l.includes('paper') || l.includes('text'))) {
+       // Only override if we didn't find a Person/Animal (Priority 1 or 2)
+       if (currentBestPriority > 2) {
+         bestCategory = 'document';
+       }
+    }
+
+    console.log(`✅ Selected: ${bestCategory} (Priority Level: ${currentBestPriority})`);
+
+    return {
+      category: bestCategory,
+      confidence: topScore,
+      rawLabels: rawLabels
+    };
+
+  } catch (error) {
+    console.warn("⚠️ Classification warning:", error);
+    return { category: 'other', confidence: 0, rawLabels: [] };
   }
-  
-  return 'other';
-}
-
-export function getCategoryColor(category: Category): string {
-  const colors: Record<Category, string> = {
-    portrait: 'bg-category-portrait',
-    animal: 'bg-category-animal',
-    vehicle: 'bg-category-vehicle',
-    landscape: 'bg-category-landscape',
-    document: 'bg-category-document',
-    food: 'bg-category-food',
-    architecture: 'bg-category-architecture',
-    other: 'bg-category-other'
-  };
-  return colors[category];
-}
-
-export function getCategoryBorderColor(category: Category): string {
-  const colors: Record<Category, string> = {
-    portrait: 'border-category-portrait',
-    animal: 'border-category-animal',
-    vehicle: 'border-category-vehicle',
-    landscape: 'border-category-landscape',
-    document: 'border-category-document',
-    food: 'border-category-food',
-    architecture: 'border-category-architecture',
-    other: 'border-category-other'
-  };
-  return colors[category];
 }

@@ -58,6 +58,7 @@ export default {
           vehicle: "hsl(var(--category-vehicle))",
           landscape: "hsl(var(--category-landscape))",
           document: "hsl(var(--category-document))",
+          screenshot: "hsl(var(--category-screenshot))",
           food: "hsl(var(--category-food))",
           architecture: "hsl(var(--category-architecture))",
           other: "hsl(var(--category-other))",

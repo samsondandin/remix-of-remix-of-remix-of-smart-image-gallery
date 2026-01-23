@@ -74,8 +74,8 @@ export function UploadZone({
       <label
         htmlFor="file-upload"
         className={`
-          relative block cursor-pointer rounded-xl border transition-all duration-300 overflow-hidden bg-card
-          ${isDragging ? 'ring-2 ring-primary/20 border-primary/60' : 'border-border/60 hover:shadow-md'}
+          relative block cursor-pointer rounded-2xl border transition-all duration-300 overflow-hidden bg-card/95
+          ${isDragging ? 'ring-2 ring-primary/30 border-primary/70 shadow-[0_0_40px_rgba(37,99,235,0.25)]' : 'border-border/60 hover:shadow-md hover:-translate-y-0.5'}
           ${!isClassifierReady ? 'pointer-events-none opacity-70' : ''}
         `}
         onDragEnter={handleDragIn}
@@ -95,9 +95,9 @@ export function UploadZone({
           )}
         </AnimatePresence>
 
-        <div className="relative p-8 flex flex-col items-center gap-4">
+        <div className="relative p-8 flex flex-col items-center gap-5">
           {/* Icon */}
-          <div className="p-4 rounded-full bg-muted/60">
+          <div className="p-4 rounded-full bg-muted/60 shadow-sm">
             {isProcessing ? (
               <Upload className="w-7 h-7 text-primary animate-spin" />
             ) : (
@@ -125,11 +125,14 @@ export function UploadZone({
               </>
             ) : (
               <>
-                <p className="text-foreground font-medium">
-                  {isDragging ? 'Drop images here' : 'Click or drag images to upload'}
+                <p className="text-foreground font-medium text-base">
+                  {isDragging ? 'Drop your photos to start organising' : 'Click to browse or drag your images here'}
                 </p>
-                <p className="text-muted-foreground text-sm">
-                  Supports JPG, PNG, WebP • Multiple files
+                <p className="text-muted-foreground text-xs md:text-sm mt-1">
+                  SmartGallery will quietly tag and group them for you.
+                </p>
+                <p className="text-muted-foreground text-[11px] md:text-xs mt-1">
+                  JPG, PNG, WebP • You can add multiple photos at once
                 </p>
               </>
             )}
@@ -137,14 +140,14 @@ export function UploadZone({
 
           {/* Features */}
           {isClassifierReady && !isProcessing && (
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] md:text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <ImageIcon className="w-3 h-3" />
-                Multiple files
+                High‑quality thumbnails
               </span>
               <span className="flex items-center gap-1">
                 <Tag className="w-3 h-3" />
-                Suggested tags
+                Automatic smart tags
               </span>
             </div>
           )}
