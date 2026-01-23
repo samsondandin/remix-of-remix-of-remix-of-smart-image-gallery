@@ -11,7 +11,7 @@ if (!rootElement) {
   console.error("CRASH: Could not find <div id='root'> in index.html");
 } else {
   createRoot(rootElement).render(
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider>
       <App />
       <Toaster position="bottom-right" richColors />
     </ThemeProvider>
