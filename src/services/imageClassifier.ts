@@ -15,19 +15,16 @@ export async function classifyImage(imageUrl: string): Promise<{ category: strin
 
     // 2. Run Analysis
     const results = await classifier(imageUrl);
-    
-    // Get Top 5 Predictions (not just 1) to understand context
-    const topResults = results.slice(0, 5); 
+
+    // Get Top 10 Predictions (Increased from 5 for better recall)
+    const topResults = results.slice(0, 10);
     const rawLabels = topResults.map((r: any) => r.label.toLowerCase());
     const topScore = topResults[0].score;
-    
-    console.log("AI Sees (Top 5):", rawLabels);
+
+    console.log("AI Sees (Top 10):", rawLabels);
 
     // 3. PRIORITY MATCHING ALGORITHM
-    // We look for matches in ALL top 5 labels.
-    // If we find "Groom" (Person, Priority 1) and "Mosque" (Building, Priority 9),
-    // we pick "Person" because 1 < 9.
-    
+
     let bestCategory = 'other';
     let currentBestPriority = 99; // Start high (worst priority)
 
@@ -37,14 +34,23 @@ export async function classifyImage(imageUrl: string): Promise<{ category: strin
       for (const cat of CATEGORIES) {
         if (cat.id === 'other') continue;
 
-        // Does this label match a keyword? (e.g., label 'groom' matches keyword 'groom')
-        const isMatch = cat.keywords.some(keyword => label.includes(keyword));
+        // Smart Match: Check if label contains keyword OR keyword contains label
+        // Example: label "golden retriever" matches keyword "dog" (No, wait, we need specific keywords)
+        // Correction: We rely on the expanded keyword list now.
+        // We check: does the label include the keyword? 
+        // e.g. label "sports car" includes keyword "car" -> MATCH
+        // e.g. label "tabby cat" matches keyword "tabby" -> MATCH
+        const isMatch = cat.keywords.some(keyword => {
+          const labelWords = label.split(/[\s,]+/); // Split label into words
+          // Check exact word match or substring
+          return label.includes(keyword) || keyword.includes(label) || labelWords.includes(keyword);
+        });
 
         if (isMatch) {
           // If we found a match, is it "more important" than what we already found?
           if (cat.priority < currentBestPriority) {
-             bestCategory = cat.id;
-             currentBestPriority = cat.priority;
+            bestCategory = cat.id;
+            currentBestPriority = cat.priority;
           }
         }
       }
@@ -52,11 +58,17 @@ export async function classifyImage(imageUrl: string): Promise<{ category: strin
 
     // 4. Special Override for Text/Screenshots (ResNet is bad at reading)
     if (rawLabels.some((l: string) => l.includes('web site') || l.includes('screen') || l.includes('paper') || l.includes('text'))) {
-       // Only override if we didn't find a Person/Animal (Priority 1 or 2)
-       if (currentBestPriority > 2) {
-         bestCategory = 'document';
-       }
+      // Only override if we didn't find a Person/Animal (Priority 1 or 2)
+      if (currentBestPriority > 2) {
+        bestCategory = 'document'; // High confidence document
+        currentBestPriority = 6;
+      }
     }
+
+    // 5. Nature Bias Correction
+    // If we only found Nature (Priority 10) but the top label is reasonably distinct (e.g., 'park bench'),
+    // we stick with Nature unless the top label strongly suggests an object we missed.
+    // (This step is implicit by the priority system, but good to note)
 
     console.log(`✅ Selected: ${bestCategory} (Priority Level: ${currentBestPriority})`);
 

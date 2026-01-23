@@ -156,32 +156,45 @@ const Index = () => {
         </header>
 
         {/* 🟢 PEOPLE BAR (Functional & Clear) */}
+        {/* 🟢 PEOPLE BAR (Functional & Clear) */}
         {knownPeople.length > 0 && (
-          <section className="border-b border-border pb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <User size={16} className="text-muted-foreground" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                People
-              </span>
+          <section className="border-b border-border/50 pb-6">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
+                  <User size={18} className="text-pink-600 dark:text-pink-400" />
+                </div>
+                <span className="text-sm font-bold text-foreground tracking-tight">
+                  People & Faces
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">{knownPeople.length} found</span>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex gap-4 overflow-x-auto pb-4 px-2 scrollbar-hide">
               {knownPeople.map((person) => (
                 <button
                   key={person.id}
                   onClick={() => setSelectedCategory(person.name)} // 🟢 CLICK TO FILTER
-                  className={`flex flex-col items-center gap-2 group transition-transform active:scale-95`}
+                  className="flex flex-col items-center gap-3 group transition-all duration-300 hover:-translate-y-1"
                 >
                   {/* Avatar */}
-                  <div className={`relative w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${selectedCategory === person.name
-                    ? 'border-primary ring-2 ring-primary/20'
-                    : 'border-transparent group-hover:border-primary/50'
+                  <div className={`relative w-20 h-20 rounded-full overflow-hidden transition-all duration-300 ${selectedCategory === person.name
+                    ? 'ring-4 ring-pink-500 shadow-lg shadow-pink-500/20'
+                    : 'ring-2 ring-transparent group-hover:ring-pink-300'
                     }`}>
-                    <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover" />
+                    <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+
+                    {/* Active Indicator */}
+                    {selectedCategory === person.name && (
+                      <div className="absolute inset-0 bg-pink-500/10 mix-blend-overlay" />
+                    )}
                   </div>
 
                   {/* Name */}
-                  <span className={`text-xs font-medium ${selectedCategory === person.name ? 'text-primary' : 'text-muted-foreground'
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-full transition-colors ${selectedCategory === person.name
+                    ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300'
+                    : 'text-muted-foreground group-hover:text-foreground'
                     }`}>
                     {person.name}
                   </span>
@@ -324,8 +337,22 @@ const Index = () => {
         {/* GRID */}
         <main className="min-h-[50vh]">
           {filteredImages.length === 0 ? (
-            <div className="text-center py-20 opacity-50">
-              <p>No photos found in "{selectedCategory}"</p>
+            <div className="flex flex-col items-center justify-center py-32 opacity-80 space-y-4 animate-in fade-in slide-in-from-bottom-8">
+              <div className="w-24 h-24 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                <span className="text-4xl grayscale opacity-50">
+                  {selectedCategory === 'all' ? '📸' :
+                    selectedCategory === 'portrait' ? '👤' :
+                      selectedCategory === 'animal' ? '🐾' : '📂'}
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-foreground">
+                {selectedCategory === 'all' ? "Gallery Empty" : `No "${selectedCategory}" Photos`}
+              </h3>
+              <p className="text-muted-foreground max-w-xs text-center">
+                {selectedCategory === 'all'
+                  ? "Upload photos or import from Drive to get started."
+                  : "Try uploading more photos, or check 'Other' if the AI missed it."}
+              </p>
             </div>
           ) : (
             <ImageGrid
