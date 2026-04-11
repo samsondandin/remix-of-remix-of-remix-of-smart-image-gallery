@@ -18,17 +18,17 @@ export async function loadFaceModels() {
     try {
       console.log("🧠 Starting AI...");
       const tf = (faceapi as any).tf;
-      try { await tf.setBackend('webgl'); await tf.ready(); } 
+      try { await tf.setBackend('webgl'); await tf.ready(); }
       catch (e) { await tf.setBackend('cpu'); await tf.ready(); }
 
       await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
       ]);
-      
+
       isModelLoaded = true;
-      console.log("✅ AI Ready");
+      console.log("✅ AI Ready (High Accuracy Mode)");
     } catch (error: any) {
       console.error("❌ AI Init Failed:", error);
       throw new Error("AI failed to load.");
@@ -40,18 +40,20 @@ export async function loadFaceModels() {
 
 // 1. REGISTRATION (Standard Scan)
 export async function getFaceEmbedding(imageUrl: string): Promise<Float32Array> {
-   if (!isModelLoaded) await loadFaceModels();
-   const img = await faceapi.fetchImage(imageUrl);
-   
-   const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.5 });
-   const detections = await faceapi.detectAllFaces(img, options)
-     .withFaceLandmarks()
-     .withFaceDescriptors();
+  if (!isModelLoaded) await loadFaceModels();
+  const img = await faceapi.fetchImage(imageUrl);
 
-   if (detections.length === 0) throw new Error("No face found. Use a clear selfie.");
-   
-   // Return largest face
-   return detections.sort((a,b) => b.detection.box.area - a.detection.box.area)[0].descriptor;
+  // 🟢 UPGRADE: Use SSD MobileNet for registration too
+  // minConfidence 0.5 for registration to ensure quality
+  const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
+  const detections = await faceapi.detectAllFaces(img, options)
+    .withFaceLandmarks()
+    .withFaceDescriptors();
+
+  if (detections.length === 0) throw new Error("No face found. Use a clear selfie.");
+
+  // Return largest face
+  return detections.sort((a, b) => b.detection.box.area - a.detection.box.area)[0].descriptor;
 }
 
 // 2. GROUP SCAN (High-Res Scan for Groups)
@@ -59,10 +61,9 @@ export async function getAllFaces(imageUrl: string): Promise<FaceResult[]> {
   if (!isModelLoaded) await loadFaceModels();
   const img = await faceapi.fetchImage(imageUrl);
 
-  // 🟢 CRITICAL: inputSize 608 (High Res) finds small faces in groups
-  const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ 
-      inputSize: 608, 
-      scoreThreshold: 0.2 
+  // 🟢 CRITICAL: SSD MobileNet finds tough faces (side profile, beard, etc)
+  const detections = await faceapi.detectAllFaces(img, new faceapi.SsdMobilenetv1Options({
+    minConfidence: 0.2 // Low confidence to catch everything
   }))
     .withFaceLandmarks()
     .withFaceDescriptors();

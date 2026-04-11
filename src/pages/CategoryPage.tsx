@@ -1,68 +1,51 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGallery } from '@/hooks/useGallery';
-import { Header } from '@/components/Header';
-import { UploadZone } from '@/components/UploadZone';
-import { CategoryNav } from '@/components/CategoryNav';
-import { ImageGrid } from '@/components/ImageGrid';
-import { Category, CATEGORIES } from '@/types/gallery';
+import { Header } from '@/components/layout/Header';
+import { UploadZone } from '@/components/features/UploadZone';
+import { CategoryNav } from '@/components/layout/CategoryNav';
+import { ImageGrid } from '@/components/gallery/ImageGrid';
+import { ImageModal } from '@/components/gallery/ImageModal';
+import { Category, CATEGORIES, GalleryImage } from '@/types/gallery';
 import { Loader2, FolderOpen, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
-import SortMenu from '@/components/SortMenu';
+import { SortMenu } from '@/components/features/SortMenu';
 import { sortImages, type SortKey } from '@/lib/utils';
 import { useState } from 'react';
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const navigate = useNavigate();
-  
+
   const {
     images,
-    isLoading,
-    isClassifierReady,
-    modelLoadProgress,
-    modelLoadStatus,
+    knownPeople,
     uploadImages,
     deleteImage,
-    processingCount,
-    setSelectedCategory,
-    changeCategory
+    moveImage,
+    isAnalyzing,
+    scanningStatus
   } = useGallery();
+
+  // Local State
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   // Find category info
   const category = CATEGORIES.find(c => c.id === categoryId);
   const isValidCategory = category || categoryId === 'all';
-  
+
   // Filter images for this category
-  const categoryImages = categoryId === 'all' 
-    ? images 
+  const categoryImages = categoryId === 'all'
+    ? images
     : images.filter(img => img.category === categoryId);
 
-  const [sortKey, setSortKey] = useState<SortKey>('date');
-  const [sortDir, setSortDir] = useState<'asc'|'desc'>('desc');
-
-  // Sync selected category with URL
+  // Sync selected category with URL (Optional, mostly for context if needed)
   useEffect(() => {
-    if (isValidCategory) {
-      setSelectedCategory(categoryId as Category | 'all');
-    }
-  }, [categoryId, isValidCategory, setSelectedCategory]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center"
-        >
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading gallery...</p>
-        </motion.div>
-      </div>
-    );
-  }
+    // If we had global selection state, we'd set it here.
+  }, [categoryId]);
 
   if (!isValidCategory) {
     return (
@@ -84,20 +67,25 @@ const CategoryPage = () => {
   const categoryIcon = categoryId === 'all' ? '🖼️' : category?.icon || '📁';
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Background gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px]" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-[128px]" />
       </div>
 
-      <Header imageCount={images.length} isClassifierReady={isClassifierReady} />
+      <Header
+        onUpload={(e) => {
+          if (e.target.files) uploadImages(Array.from(e.target.files));
+        }}
+      />
 
-      <main className="container mx-auto px-6 py-8 relative">
+      <main className="container mx-auto px-6 py-24 relative">
         {/* Category Navigation */}
-        <CategoryNav 
-          currentCategory={categoryId as Category | 'all'} 
+        <CategoryNav
           images={images}
+          knownPeople={knownPeople}
+          onSelect={(cat) => navigate(cat === 'all' ? '/gallery' : `/category/${cat}`)}
         />
 
         <div className="mt-8 space-y-6">
@@ -108,64 +96,51 @@ const CategoryPage = () => {
           >
             <UploadZone
               onUpload={uploadImages}
-              isProcessing={processingCount > 0}
-              processingCount={processingCount}
-              isClassifierReady={isClassifierReady}
-              modelProgress={modelLoadProgress}
-              modelStatus={modelLoadStatus}
+              isProcessing={isAnalyzing}
+              processingCount={isAnalyzing ? 1 : 0} // visual approximation
+              isClassifierReady={true} // assume ready
+              modelProgress={100}
+              modelStatus={scanningStatus || "Ready"}
             />
           </motion.div>
 
           {/* Category Header */}
           <div className="flex items-center gap-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl"
-            >
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl">
               {categoryIcon}
-            </motion.div>
+            </div>
             <div>
-              <motion.h1
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-3xl font-display font-extrabold tracking-tight"
-              >
+              <h1 className="text-3xl font-display font-extrabold tracking-tight">
                 {categoryLabel}
-              </motion.h1>
+              </h1>
               <p className="text-muted-foreground">
                 {categoryImages.length} {categoryImages.length === 1 ? 'image' : 'images'} in this folder
               </p>
             </div>
           </div>
 
-          {/* Empty State */}
-          {categoryImages.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-16"
-            >
-              <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-display font-bold mb-2">No images yet</h3>
-              <p className="text-muted-foreground">
-                Upload images and they'll be automatically sorted into this folder
-              </p>
-            </motion.div>
-          )}
-
           {/* Image grid */}
           <div className="flex items-center justify-between mb-4">
             <div />
             <SortMenu value={sortKey} dir={sortDir} onChange={v => setSortKey(v)} onToggleDir={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')} />
           </div>
+
           <ImageGrid
             images={sortImages(categoryImages, sortKey, sortDir)}
-            onDelete={deleteImage}
-            onChangeCategory={changeCategory}
+            onImageClick={setSelectedImage}
+            isSelectionMode={false}
           />
         </div>
       </main>
+
+      {/* Image Modal */}
+      <ImageModal
+        image={selectedImage}
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        onDelete={deleteImage}
+        onMove={moveImage}
+      />
     </div>
   );
 };

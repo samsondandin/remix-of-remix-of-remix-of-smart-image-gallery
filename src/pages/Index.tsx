@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
+import { auth, firebaseApiKey } from '@/lib/firebase';
 import { useGallery } from '@/hooks/useGallery';
-import { CategoryStories } from '@/components/CategoryStories';
-import { ImageGrid } from '@/components/ImageGrid';
-import { ImageModal } from '@/components/ImageModal';
+import { CategoryStories } from '@/components/features/CategoryStories';
+import { ImageGrid } from '@/components/gallery/ImageGrid';
+import { ImageModal } from '@/components/gallery/ImageModal';
+import { PeopleBar } from '@/components/features/PeopleBar';
+import { SearchBar } from '@/components/features/SearchBar';
+import { DriveImportModal } from '@/components/features/DriveImportModal';
+import { AddPersonModal } from '@/components/features/AddPersonModal';
 import { GalleryImage } from '@/types/gallery';
 import { toast } from 'sonner';
 import { Plus, X, User, CloudDownload, Search, Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { extractFolderId, fetchDriveFiles, downloadDriveFile } from '@/services/googleDrive';
+import JSZip from 'jszip';
+import { CheckSquare, Trash2, Download, XCircle } from 'lucide-react';
+import { LoginButton } from '@/components/LoginButton';
 
 const Index = () => {
   const { theme, toggleTheme } = useTheme();
@@ -17,7 +25,9 @@ const Index = () => {
     registerPerson,
     uploadImages,
     deleteImage,
+    deleteImages,
     moveImage,
+    deletePerson,
     isAnalyzing,
     scanningStatus
   } = useGallery();
@@ -30,6 +40,11 @@ const Index = () => {
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Selection State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isZipping, setIsZipping] = useState(false);
+
   // Drag State
   const [isDragging, setIsDragging] = useState(false);
 
@@ -39,12 +54,23 @@ const Index = () => {
   const [driveApiKey, setDriveApiKey] = useState("");
   const [showDriveAdvanced, setShowDriveAdvanced] = useState(false); // New: Hide API Key
   const [isImportingDrive, setIsImportingDrive] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
 
   // 🟢 FILTER LOGIC (Crucial for clicking faces)
   // 🟢 FILTER LOGIC (Crucial for clicking faces + Magic Search)
   const filteredImages = images.filter(img => {
     // 1. Category Filter
-    const categoryMatch = selectedCategory === 'all' ? true : img.category === selectedCategory;
+    let categoryMatch = false;
+    if (selectedCategory === 'all') {
+      categoryMatch = true;
+    } else if (selectedCategory === 'portrait') {
+      // 🟢 FIX: "People" tab should show explicit portraits AND specific people
+      const isKnownPerson = knownPeople.some(p => p.name === img.category);
+      categoryMatch = img.category === 'portrait' || isKnownPerson;
+    } else {
+      // Standard match (e.g. "Vehicles" or specific person "Samson")
+      categoryMatch = img.category === selectedCategory || (img.matchedPersonName && img.matchedPersonName.includes(selectedCategory));
+    }
 
     // 2. Search Filter (The "Magic")
     const safeQuery = searchQuery.toLowerCase().trim();
@@ -52,23 +78,14 @@ const Index = () => {
       ? true
       : img.rawLabels.some(l => l.includes(safeQuery)) ||
       img.filename.toLowerCase().includes(safeQuery) ||
-      (img.matchedPersonName?.toLowerCase().includes(safeQuery)) ||
+      img.filename.toLowerCase().includes(safeQuery) ||
+      (img.matchedPersonName && img.matchedPersonName.toLowerCase().includes(safeQuery)) ||
       (img.category.includes(safeQuery));
 
     return categoryMatch && searchMatch;
   });
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const fileInput = document.getElementById('face-upload') as HTMLInputElement;
-    if (!newPersonName || !fileInput.files?.[0]) {
-      toast.error("Please provide a name and a photo");
-      return;
-    }
-    await registerPerson(newPersonName, fileInput.files[0]);
-    setIsAddingPerson(false);
-    setNewPersonName("");
-  };
+  // Removed handleRegister - using component instead
 
   const handleDriveImport = async () => {
     try {
@@ -77,12 +94,13 @@ const Index = () => {
         toast.error("Invalid Drive Folder Link");
         return;
       }
-      if (!driveApiKey && !showDriveAdvanced) {
-        // If they didn't toggle advanced, maybe they expect it to work without key?
-        // For now, key IS required for folder listing.
-        // We'll warn them or just check key.
-      }
-      if (!driveApiKey) {
+
+      // Use user-provided key or fallback to project key
+      // Note: Project key needs "Google Drive API" enabled in Cloud Console.
+      const PROJECT_API_KEY = "AIzaSyDAmDp2J3OQJKkfeyCtjOX_950OS9177qA";
+      const effectiveApiKey = driveApiKey || firebaseApiKey || PROJECT_API_KEY;
+
+      if (!effectiveApiKey) {
         toast.error("API Key is required to search folders");
         return;
       }
@@ -90,7 +108,7 @@ const Index = () => {
       setIsImportingDrive(true);
       toast.info("Fetching file list...");
 
-      const files = await fetchDriveFiles(folderId, driveApiKey);
+      const files = await fetchDriveFiles(folderId, effectiveApiKey);
       if (files.length === 0) {
         toast.warning("No images found in this folder");
         setIsImportingDrive(false);
@@ -104,7 +122,7 @@ const Index = () => {
       // Parallel + Limited concurrency could be better, but sequential for safety first
       for (const f of files) {
         try {
-          const blob = await downloadDriveFile(f.id, driveApiKey);
+          const blob = await downloadDriveFile(f.id, effectiveApiKey);
           const file = new File([blob], f.name, { type: f.mimeType });
           downloadedFiles.push(file);
         } catch (err) {
@@ -149,6 +167,71 @@ const Index = () => {
     }
   };
 
+  // Selection Logic
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredImages.length) {
+      setSelectedIds([]); // Deselect all
+    } else {
+      setSelectedIds(filteredImages.map(img => img.id));
+    }
+  };
+
+  // Bulk Actions
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.length} images? This cannot be undone.`)) return;
+    await deleteImages(selectedIds);
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+  };
+
+  const handleBulkDownload = async () => {
+    setIsZipping(true);
+    toast.info("Preparing Zip file...");
+    try {
+      const zip = new JSZip();
+
+      // Add files to zip
+      // We might need to fetch data urls again or just use the ones we have?
+      // DataURLs are heavy for memory if we have 100s. 
+      // But for local app this is fine for now.
+
+      let count = 0;
+      for (const id of selectedIds) {
+        const img = images.find(i => i.id === id);
+        if (!img) continue;
+
+        // Extract base64
+        const base64Data = img.url.split(',')[1];
+        zip.file(img.filename || `image-${count}.jpg`, base64Data, { base64: true });
+        count++;
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+
+      // Trigger Download
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(content);
+      link.download = `smart-gallery-${new Date().toISOString().slice(0, 10)}.zip`;
+      link.click();
+
+      toast.success("Download started!");
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+
+    } catch (e: any) {
+      toast.error("Zip failed: " + e.message);
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
+
   return (
     <div
       className="min-h-screen bg-background text-foreground relative overflow-hidden"
@@ -168,40 +251,75 @@ const Index = () => {
         <header className="flex flex-col md:flex-row justify-between items-center gap-6 glass p-6 rounded-3xl">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-gradient">Smart Gallery</h1>
-            <p className="text-muted-foreground font-medium">Ai-Powered Memories</p>
+            <button
+              onClick={() => setIsHelpOpen(true)}
+              className="text-muted-foreground font-medium hover:text-primary transition-colors flex items-center gap-2"
+            >
+              <span className="hidden md:inline">Ai-Powered Memories</span>
+              <span className="text-xs bg-secondary px-2 py-0.5 rounded-full border border-border flex items-center gap-1">
+                <span className="hidden sm:inline">How it works?</span>
+                <span className="sm:hidden">Help</span>
+              </span>
+            </button>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-nowrap overflow-x-auto md:flex-wrap justify-start md:justify-end gap-2 md:gap-3 items-center w-full md:w-auto -mx-6 px-6 md:mx-0 md:px-0 no-scrollbar pb-1 md:pb-0">
+            {/* LOGIN BUTTON */}
+            <div className="shrink-0">
+              <LoginButton />
+            </div>
+
             <button
               onClick={toggleTheme}
-              className="p-2.5 rounded-full bg-secondary/50 hover:bg-secondary text-foreground transition-colors"
+              className="shrink-0 p-2.5 rounded-full bg-secondary/50 hover:bg-secondary text-foreground transition-colors"
               title="Toggle Theme"
             >
               {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
             </button>
 
+            {/* SELECTION TOGGLE */}
+            <button
+              onClick={() => {
+                setIsSelectionMode(!isSelectionMode);
+                setSelectedIds([]);
+              }}
+              className={`shrink-0 p-2.5 rounded-full transition-colors flex items-center gap-2 px-3 md:px-4
+                 ${isSelectionMode
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'bg-secondary/50 hover:bg-secondary text-foreground'
+                }`}
+              title="Select Multiple"
+            >
+              <CheckSquare size={18} />
+              <span className="text-xs md:text-sm font-medium whitespace-nowrap">{isSelectionMode ? 'Done' : 'Select'}</span>
+            </button>
+
             <button
               onClick={() => setIsAddingPerson(!isAddingPerson)}
-              className="bg-secondary/50 hover:bg-secondary text-foreground px-5 py-2.5 rounded-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 border border-transparent hover:border-border"
+              className="shrink-0 bg-secondary/50 hover:bg-secondary text-foreground p-2.5 md:px-5 md:py-2.5 rounded-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 border border-transparent hover:border-border"
+              title="Add Person"
             >
               <Plus size={18} />
-              <span>New Person</span>
+              <span className="text-xs md:text-sm md:hidden whitespace-nowrap">Person</span>
+              <span className="hidden md:inline whitespace-nowrap">New Person</span>
             </button>
 
             <button
               onClick={() => setIsDriveModalOpen(true)}
-              className="bg-secondary/50 hover:bg-secondary text-foreground px-5 py-2.5 rounded-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 border border-transparent hover:border-border"
+              className="shrink-0 bg-secondary/50 hover:bg-secondary text-foreground p-2.5 md:px-5 md:py-2.5 rounded-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 border border-transparent hover:border-border"
+              title="Import from Drive"
             >
               <CloudDownload size={18} />
-              <span>Import Drive</span>
+              <span className="text-xs md:text-sm md:hidden whitespace-nowrap">Drive</span>
+              <span className="hidden md:inline whitespace-nowrap">Import Drive</span>
             </button>
 
-            <label className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-2.5 rounded-2xl transition-all flex items-center gap-2 font-medium shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 active:scale-95">
-              <span>Upload</span>
+            <label className="shrink-0 cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground p-2.5 md:px-8 md:py-2.5 rounded-2xl transition-all flex items-center gap-2 font-medium shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 active:scale-95" title="Upload Images">
+              <span className="text-xs md:text-sm whitespace-nowrap">Upload</span>
               <input
                 type="file"
                 multiple
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/*"
                 className="hidden"
                 onChange={(e) => e.target.files && uploadImages(Array.from(e.target.files))}
               />
@@ -209,200 +327,38 @@ const Index = () => {
           </div>
         </header>
 
-        {/* MAGIC SEARCH BAR */}
-        <section className="relative max-w-2xl mx-auto -mt-4 mb-8 z-20">
-          <div className={`relative group transition-all duration-500 ${searchQuery ? 'scale-105' : ''}`}>
-            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-              <Search className={`w-5 h-5 transition-colors ${searchQuery ? 'text-primary' : 'text-muted-foreground'}`} />
-            </div>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Magic Search... (e.g., 'dog', 'beach', 'smile')"
-              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white/80 dark:bg-black/50 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl focus:shadow-2xl focus:shadow-primary/20 transition-all outline-none text-lg placeholder:text-muted-foreground/50"
-            />
-
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X size={18} />
-              </button>
-            )}
-          </div>
-        </section>
+        {/* MAGIC SEARCH BAR (Extract) */}
+        <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
         {/* 🟢 PEOPLE BAR (Functional & Clear) */}
         {/* 🟢 PEOPLE BAR (Functional & Clear) */}
-        {
-          knownPeople.length > 0 && (
-            <section className="border-b border-border/50 pb-6">
-              <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
-                    <User size={18} className="text-pink-600 dark:text-pink-400" />
-                  </div>
-                  <span className="text-sm font-bold text-foreground tracking-tight">
-                    People & Faces
-                  </span>
-                </div>
-                <span className="text-xs text-muted-foreground">{knownPeople.length} found</span>
-              </div>
+        {/* PEOPLE BAR */}
+        <PeopleBar
+          knownPeople={knownPeople}
+          selectedCategory={selectedCategory as string}
+          onSelectPerson={setSelectedCategory}
+          onDeletePerson={deletePerson}
+        />
 
-              <div className="flex gap-4 overflow-x-auto pb-4 px-2 scrollbar-hide">
-                {knownPeople.map((person) => (
-                  <button
-                    key={person.id}
-                    onClick={() => setSelectedCategory(person.name)} // 🟢 CLICK TO FILTER
-                    className="flex flex-col items-center gap-3 group transition-all duration-300 hover:-translate-y-1"
-                  >
-                    {/* Avatar */}
-                    <div className={`relative w-20 h-20 rounded-full overflow-hidden transition-all duration-300 ${selectedCategory === person.name
-                      ? 'ring-4 ring-pink-500 shadow-lg shadow-pink-500/20'
-                      : 'ring-2 ring-transparent group-hover:ring-pink-300'
-                      }`}>
-                      <img src={person.avatarUrl} alt={person.name} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
-
-                      {/* Active Indicator */}
-                      {selectedCategory === person.name && (
-                        <div className="absolute inset-0 bg-pink-500/10 mix-blend-overlay" />
-                      )}
-                    </div>
-
-                    {/* Name */}
-                    <span className={`text-xs font-semibold px-3 py-1 rounded-full transition-colors ${selectedCategory === person.name
-                      ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300'
-                      : 'text-muted-foreground group-hover:text-foreground'
-                      }`}>
-                      {person.name}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )
-        }
-
-        {/* REGISTER MODAL */}
-        {
-          isAddingPerson && (
-            <div className="bg-card border border-border p-6 rounded-xl flex flex-col md:flex-row gap-4 items-end shadow-lg animate-in slide-in-from-top-2">
-              <div className="flex-1 w-full space-y-1">
-                <label className="text-xs font-semibold">Name</label>
-                <input
-                  type="text"
-                  value={newPersonName}
-                  onChange={e => setNewPersonName(e.target.value)}
-                  placeholder="Name"
-                  className="w-full bg-secondary/50 border border-input rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              <div className="flex-1 w-full space-y-1">
-                <label className="text-xs font-semibold">Reference Photo</label>
-                <input
-                  id="face-upload"
-                  type="file"
-                  accept="image/*"
-                  className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleRegister}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md font-medium text-sm"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setIsAddingPerson(false)}
-                  className="p-2 hover:bg-secondary rounded-md"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-          )
-        }
-
-        {/* DRIVE IMPORT MODAL */}
-        {
-          isDriveModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <div className="glass bg-white/90 dark:bg-zinc-900/90 p-8 rounded-3xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 space-y-6">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold flex items-center gap-2 bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-                    <CloudDownload className="text-blue-500" size={24} />
-                    Import from Drive
-                  </h3>
-                  {!isImportingDrive && (
-                    <button onClick={() => setIsDriveModalOpen(false)} className="p-2 hover:bg-black/5 rounded-full transition-colors">
-                      <X size={20} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Folder Link / ID</label>
-                    <input
-                      value={driveLink}
-                      onChange={(e) => setDriveLink(e.target.value)}
-                      placeholder="https://drive.google.com/drive/folders/..."
-                      className="w-full bg-secondary/50 border-0 ring-1 ring-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all shadow-inner"
-                    />
-                    <p className="text-[11px] text-muted-foreground ml-1">
-                      Paste the link to your folder.
-                    </p>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowDriveAdvanced(!showDriveAdvanced)}
-                      className="text-xs flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors font-medium ml-1"
-                    >
-                      {showDriveAdvanced ? "Hide settings" : "Advanced settings (API Key)"}
-                    </button>
-
-                    {showDriveAdvanced && (
-                      <div className="mt-3 space-y-1.5 animate-in slide-in-from-top-1 fade-in">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground ml-1">Google Drive API Key</label>
-                        <input
-                          value={driveApiKey}
-                          onChange={(e) => setDriveApiKey(e.target.value)}
-                          type="password"
-                          placeholder="AIzaSy..."
-                          className="w-full bg-secondary/50 border-0 ring-1 ring-border/50 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary transition-all shadow-inner"
-                        />
-                        <p className="text-[10px] text-orange-500/80 ml-1">
-                          Required for folder access due to Google security policies.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleDriveImport}
-                  disabled={isImportingDrive}
-                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:opacity-90 text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex justify-center gap-2 active:scale-[0.98]"
-                >
-                  {isImportingDrive ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                      Importing...
-                    </>
-                  ) : (
-                    "Start Import"
-                  )}
-                </button>
-              </div>
-            </div>
-          )
-        }
-
+        {/* ADD PERSON MODAL */}
+        <AddPersonModal
+          isOpen={isAddingPerson}
+          onClose={() => setIsAddingPerson(false)}
+          onRegister={registerPerson}
+        />
+        {/* DRIVE IMPORT MODAL (Extract) */}
+        <DriveImportModal
+          isOpen={isDriveModalOpen}
+          onClose={() => setIsDriveModalOpen(false)}
+          driveLink={driveLink}
+          setDriveLink={setDriveLink}
+          driveApiKey={driveApiKey}
+          setDriveApiKey={setDriveApiKey}
+          showAdvanced={showDriveAdvanced}
+          setShowAdvanced={setShowDriveAdvanced}
+          isImporting={isImportingDrive}
+          onImport={handleDriveImport}
+        />
         {/* CATEGORY TABS */}
         <section className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm py-2 border-b border-border">
           <CategoryStories
@@ -414,9 +370,34 @@ const Index = () => {
         {/* SCANNER OVERLAY */}
         {
           isAnalyzing && (
-            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="font-medium animate-pulse">{scanningStatus}</p>
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="w-full max-w-md p-6 bg-card border border-border/50 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+                <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+
+                <div className="text-center space-y-2 w-full">
+                  <h3 className="text-lg font-bold">Analyzing Photos</h3>
+                  <p className="text-muted-foreground font-mono text-sm">{scanningStatus || "Initializing AI..."}</p>
+
+                  {/* Progress Bar Logic */}
+                  {scanningStatus && scanningStatus.includes('/') && (
+                    <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mt-2 relative">
+                      <div
+                        className="bg-primary h-full transition-all duration-300 ease-out"
+                        style={{
+                          width: (() => {
+                            const match = scanningStatus.match(/(\d+)\/(\d+)/);
+                            if (match) {
+                              const [_, current, total] = match;
+                              return `${(parseInt(current) / parseInt(total)) * 100}%`;
+                            }
+                            return '0%';
+                          })()
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )
         }
@@ -445,6 +426,9 @@ const Index = () => {
             <ImageGrid
               images={filteredImages}
               onImageClick={setSelectedImage}
+              isSelectionMode={isSelectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
             />
           )}
         </main>
@@ -457,18 +441,114 @@ const Index = () => {
           onDelete={deleteImage}
           onMove={moveImage}
         />
-        {/* DRAG OVERLAY */}
-        {isDragging && (
-          <div className="fixed inset-0 z-[100] bg-primary/20 backdrop-blur-sm border-4 border-primary border-dashed m-4 rounded-3xl flex items-center justify-center animate-in fade-in zoom-in-95 pointer-events-none">
-            <div className="bg-background/90 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
-              <CloudDownload size={64} className="text-primary animate-bounce" />
-              <h2 className="text-2xl font-bold">Drop Photos Here</h2>
-              <p className="text-muted-foreground">Release to upload instantly</p>
+
+        {/* BULK ACTION BAR */}
+        {
+          selectedIds.length > 0 && (
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-background/80 backdrop-blur-xl border border-border p-2 pr-6 rounded-full shadow-2xl animate-in slide-in-from-bottom-6">
+              <div className="bg-foreground text-background px-4 py-2 rounded-full font-bold text-sm min-w-[3rem] text-center">
+                {selectedIds.length}
+              </div>
+
+              <div className="h-6 w-px bg-border" /> {/* Divider */}
+
+              <button
+                onClick={handleSelectAll}
+                className="text-sm font-medium hover:text-primary transition-colors whitespace-nowrap"
+              >
+                {selectedIds.length === filteredImages.length ? 'Deselect All' : 'Select All'}
+              </button>
+
+              <div className="h-6 w-px bg-border" /> {/* Divider */}
+
+              <button
+                onClick={handleBulkDownload}
+                disabled={isZipping}
+                className="flex flex-col items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary transition-colors p-2 hover:bg-secondary rounded-lg"
+              >
+                {isZipping ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Download size={20} />}
+                Download
+              </button>
+
+              <button
+                onClick={handleBulkDelete}
+                className="flex flex-col items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 transition-colors p-2 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg"
+              >
+                <Trash2 size={20} />
+                Delete
+              </button>
             </div>
-          </div>
-        )}
+          )
+        }
+
+        {/* DRAG OVERLAY */}
+        {
+          isDragging && (
+            <div className="fixed inset-0 z-[100] bg-primary/20 backdrop-blur-sm border-4 border-primary border-dashed m-4 rounded-3xl flex items-center justify-center animate-in fade-in zoom-in-95 pointer-events-none">
+              <div className="bg-background/90 p-8 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
+                <CloudDownload size={64} className="text-primary animate-bounce" />
+                <h2 className="text-2xl font-bold">Drop Photos Here</h2>
+                <p className="text-muted-foreground">Release to upload instantly</p>
+              </div>
+            </div>
+          )
+        }
 
       </div >
+      {/* HELP MODAL */}
+      {isHelpOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="glass bg-white/95 dark:bg-zinc-900/95 p-8 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden">
+            <button
+              onClick={() => setIsHelpOpen(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-secondary rounded-full transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-2xl font-bold mb-6 text-gradient">How to use Smart Gallery</h2>
+
+            <div className="space-y-6">
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                  <Plus size={24} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">1. Upload Photos</h3>
+                  <p className="text-sm text-muted-foreground">Click "Upload" or drag & drop images anywhere. Limits are gone! Add as many as you like.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0">
+                  <CloudDownload size={24} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">2. AI Sorting</h3>
+                  <p className="text-sm text-muted-foreground">The AI automatically sorts your photos into categories like People, Nature, and Food. No manual tagging needed.</p>
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center text-pink-600 dark:text-pink-400 shrink-0">
+                  <User size={24} />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">3. Face Recognition</h3>
+                  <p className="text-sm text-muted-foreground">It learns faces! Add a "New Person" with a reference photo, and it will find them in your gallery.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsHelpOpen(false)}
+              className="w-full mt-8 bg-primary text-primary-foreground py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

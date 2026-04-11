@@ -28,6 +28,8 @@ export const SmartImage: React.FC<Props> = ({ image, className, onClick }) => {
         alt={image.filename} 
         className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105" 
         loading="lazy"
+        decoding="async"
+        style={{ minHeight: '150px' }}
       />
 
       {/* HOVER OVERLAY */}

@@ -1,17 +1,21 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { CustomCursor } from "./components/CustomCursor";
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Index from "./pages/Index";
 import Landing from "./pages/Landing";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function App() {
   return (
-    <Router>
-      <CustomCursor />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/gallery" element={<Index />} />
-      </Routes>
-    </Router>
+    <TooltipProvider>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/gallery" element={<Index />} />
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </TooltipProvider>
   );
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Lock, Zap, Brain, Sparkles } from 'lucide-react';
+import { ArrowRight, Lock, Zap, Brain, Sparkles, CloudDownload } from 'lucide-react';
 
 const Landing = () => {
     const navigate = useNavigate();
@@ -46,48 +46,65 @@ const Landing = () => {
                     </div>
                 </div>
 
-                {/* Right: Abstract "Bento" Visualization */}
-                <div className="flex-1 w-full max-w-lg lg:max-w-xl relative">
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 dark:bg-black/5 backdrop-blur-sm border border-black/5 dark:border-white/5 rounded-[2rem] shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700 ease-out">
-                        {/* Block 1: Smart Sort */}
-                        <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col justify-between h-48 col-span-1">
-                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-2">
-                                <Brain size={20} className="text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold">Auto-Sort</h3>
-                                <p className="text-xs text-muted-foreground mt-1">AI tags every photo.</p>
-                            </div>
-                        </div>
+                {/* Right: Quick Guide */}
+                <div className="flex-1 w-full max-w-lg lg:max-w-xl relative animate-in fade-in slide-in-from-right-8 duration-1000 delay-200">
+                    <div className="bg-white/5 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden">
+                        {/* Glass Reflection */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
 
-                        {/* Block 2: Performance */}
-                        <div className="bg-gradient-to-br from-primary/10 to-transparent p-6 rounded-2xl border border-primary/10 flex flex-col justify-center items-center text-center h-48 col-span-1">
-                            <Zap size={32} className="text-primary mb-3" />
-                            <span className="text-3xl font-mono font-bold tracking-tighter">0.02s</span>
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide mt-1">Lookup Time</span>
-                        </div>
+                        <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                            <Sparkles className="text-yellow-500" size={24} />
+                            How it works
+                        </h3>
 
-                        {/* Block 3: Privacy (Wide) */}
-                        <div className="bg-card p-6 rounded-2xl shadow-sm border border-border/50 col-span-2 flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                                <Lock size={22} className="text-green-600 dark:text-green-400" />
+                        <div className="space-y-6 relative z-10">
+                            <div className="flex gap-4 items-start group">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0 group-hover:scale-110 transition-transform">
+                                    <CloudDownload size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-lg">1. Upload or Drag</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Drag & Drop your folder or select photos. We support direct Google Drive imports too.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-sm">Offline First</h3>
-                                <p className="text-xs text-muted-foreground">No internet? No problem. It works everywhere.</p>
+
+                            <div className="flex gap-4 items-start group">
+                                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500 shrink-0 group-hover:scale-110 transition-transform">
+                                    <Brain size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-lg">2. AI Sorting</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Our local neural engine instantly organizes photos into People, Nature, Food, and more.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4 items-start group">
+                                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 flex items-center justify-center text-pink-500 shrink-0 group-hover:scale-110 transition-transform">
+                                    <Zap size={24} />
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-lg">3. Magic Search</h4>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                        Find "smiling" or "beach" instantly. Teach it faces, and it remembers them forever.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Decor Elements */}
-                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full blur-3xl opacity-20 animate-pulse" />
-                    <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full blur-3xl opacity-20" />
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
+                    <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl" />
                 </div>
             </div>
 
             <footer className="absolute bottom-6 w-full text-center">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/40 font-bold">
-                    Smart Gallery • Est. 2026
+                <p className="text-[11px] uppercase tracking-widest text-muted-foreground/60 font-bold">
+                    Developed by Samson • © 2026 Smart Gallery
                 </p>
             </footer>
         </div>
